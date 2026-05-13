@@ -101,7 +101,6 @@ export class SearchEngine {
 				for (const raw of include.split(/[,;\n]+/)) {
 					const t = raw.trim();
 					if (!t) {continue;}
-					// 检测 ./工作区名称 或 ./工作区名称/子路径
 					const resolved = this._resolveWorkspacePrefix(t, wsFolders);
 					const glob = resolved.pattern ? normalizeGlob(resolved.pattern) : '**/*';
 					includeParts.push(glob);
@@ -115,43 +114,64 @@ export class SearchEngine {
 				}
 			}
 
-			let includePattern: vscode.GlobPattern;
-			if (includeParts.length === 0) {
-				includePattern = '**/*';
-			} else if (!wsConflict && includeWs) {
-				const p = includeParts.length === 1 ? includeParts[0] : `{${includeParts.join(',')}}`;
-				includePattern = new vscode.RelativePattern(includeWs, p);
-			} else {
-				includePattern = includeParts.length === 1 ? includeParts[0] : `{${includeParts.join(',')}}`;
-			}
+			const includeGlobStr = includeParts.length === 0
+				? '**/*'
+				: (includeParts.length === 1 ? includeParts[0] : `{${includeParts.join(',')}}`);
 
-			// 构建 exclude glob（不含 .gitignore）
-			const excludeParts: string[] = [];
+			// 构建基础 exclude（来自配置和用户输入，不含 .gitignore）
+			const baseExcludeParts: string[] = [];
 
 			if (useExcludeSettings) {
-				excludeParts.push(...readConfigExcludes());
+				baseExcludeParts.push(...readConfigExcludes());
 			}
 
 			if (exclude?.trim()) {
 				for (const p of exclude.split(/[,;\n]+/)) {
 					const t = p.trim();
-					if (t) { excludeParts.push(normalizeGlob(t)); }
+					if (t) { baseExcludeParts.push(normalizeGlob(t)); }
 				}
 			}
-			let excludePattern = null;
 
 			if (useExcludeSettings) {
-				// 收集 .gitignore 排除模式
-				const gitExcludes = await this._collectGitignoreExcludes(includeParts, excludeParts, includeWs);
-				excludeParts.push(...gitExcludes);
-				
-				excludePattern = excludeParts.length > 0
-					? `{${excludeParts.join(',')}}`
-					: null;
+				// 逐工作区收集 .gitignore + findFiles，最后合并结果
+				const wsFolders = vscode.workspace.workspaceFolders;
+				const targetWss = (!wsConflict && includeWs)
+					? [includeWs]
+					: (wsFolders && wsFolders.length > 0 ? [...wsFolders] : [undefined]);
+
+				const allResults: vscode.Uri[] = [];
+				for (const ws of targetWss) {
+					if (this._cancelled) {return;}
+
+					const gitExcludes = await this._collectGitignoreExcludes(includeParts, baseExcludeParts, ws);
+					const wsExcludeParts = [...baseExcludeParts, ...gitExcludes];
+					const wsExcludePattern = wsExcludeParts.length > 0
+						? `{${wsExcludeParts.join(',')}}`
+						: undefined;
+
+					const wsInclude: vscode.GlobPattern = ws
+						? new vscode.RelativePattern(ws, includeGlobStr)
+						: includeGlobStr;
+
+					const wsFiles = await vscode.workspace.findFiles(wsInclude, wsExcludePattern);
+					allResults.push(...wsFiles);
+				}
+				files = allResults;
+			} else {
+				// 不使用排除设置：单次 findFiles
+				let includePattern: vscode.GlobPattern;
+				if (!wsConflict && includeWs) {
+					includePattern = new vscode.RelativePattern(includeWs, includeGlobStr);
+				} else {
+					includePattern = includeGlobStr;
+				}
+
+				const excludePattern = baseExcludeParts.length > 0
+					? `{${baseExcludeParts.join(',')}}`
+					: undefined;
+
+				files = await vscode.workspace.findFiles(includePattern, excludePattern);
 			}
-
-
-			files = await vscode.workspace.findFiles(includePattern, excludePattern);
 		}
 
 		const total = files.length;
@@ -198,14 +218,12 @@ export class SearchEngine {
 			// 构建 .gitignore 文件的查找范围
 			let gitInclude: string;
 			if (includeParts.length > 0) {
-				// 提取每个 include 模式的静态目录前缀
 				const dirs = includeParts.map(p => {
 					const m = p.match(/^([^*?{\[]*\/)/);
 					return m ? m[1] : '';
 				}).filter(Boolean);
 				const unique = [...new Set(dirs)];
 				if (unique.length > 0) {
-					// 展开为 {.gitignore, dir1.gitignore, dir1**/.gitignore, dir2.gitignore, ...}
 					const parts = ['.gitignore'];
 					for (const d of unique) {
 						parts.push(`${d}.gitignore`, `${d}**/.gitignore`);
@@ -276,10 +294,8 @@ export class SearchEngine {
 		// 去除末尾空格（.gitignore 允许）
 		p = p.trimEnd();
 
-		let anchored = true;
-		// let anchored = false;
+		let anchored = true; // 每个目录下的.gitignore应该只影响该目录下，所以都需要加前缀路径
 		if (p.startsWith('/')) {
-			// anchored = true;
 			p = p.substring(1);
 		}
 
