@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import PinyinMatch from 'pinyin-match';
+import { SearchViewProvider } from './searchViewProvider';
 
 interface FileItem {
 	uri: vscode.Uri;
@@ -61,7 +62,8 @@ function matchAll(text: string, pattern: string): Array<{ start: number; end: nu
 }
 
 export function activate(context: vscode.ExtensionContext) {
-	const disposable = vscode.commands.registerCommand('pinyinsousuo.searchFiles', async () => {
+	// === 原有文件搜索 ===
+	const fileSearchDisposable = vscode.commands.registerCommand('pinyinsousuo.searchFiles', async () => {
 		const workspaceFolders = vscode.workspace.workspaceFolders;
 		if (!workspaceFolders) {
 			vscode.window.showErrorMessage('请先打开一个工作区');
@@ -144,7 +146,28 @@ export function activate(context: vscode.ExtensionContext) {
 		quickPick.show();
 	});
 
-	context.subscriptions.push(disposable);
+	context.subscriptions.push(fileSearchDisposable);
+
+	// === 新增内容搜索 ===
+	const searchProvider = new SearchViewProvider(context.extensionUri);
+
+	context.subscriptions.push(
+		vscode.window.registerWebviewViewProvider(SearchViewProvider.viewType, searchProvider),
+	);
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand('pinyinsousuo.focusSearch', async () => {
+			// 获取编辑器中选中的文本
+			let selectedText = '';
+			const editor = vscode.window.activeTextEditor;
+			if (editor && !editor.selection.isEmpty) {
+				selectedText = editor.document.getText(editor.selection);
+			}
+
+			await vscode.commands.executeCommand('workbench.view.extension.pinyinsousuo-sidebar');
+			searchProvider.focus(selectedText);
+		}),
+	);
 }
 
 export function deactivate() {}

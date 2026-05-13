@@ -1,0 +1,365 @@
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	font-family: var(--vscode-font-family, -apple-system, sans-serif);
+	font-size: var(--vscode-font-size, 13px);
+	padding: 8px;
+	color: var(--vscode-editor-foreground);
+	background: transparent;
+	overflow-x: hidden;
+	user-select: none;
+}
+
+input {
+	font-family: inherit;
+	font-size: inherit;
+}
+
+/* 搜索输入框 */
+.search-box {
+	margin-bottom: 8px;
+}
+
+.search-box input {
+	width: 100%;
+	padding: 4px 8px;
+	border: 1px solid var(--vscode-input-border, transparent);
+	background: var(--vscode-input-background);
+	color: var(--vscode-input-foreground);
+	border-radius: 2px;
+	outline: none;
+}
+
+.search-box input:focus {
+	border-color: var(--vscode-focusBorder);
+}
+
+/* 选项区 */
+.options-section {
+	margin-bottom: 8px;
+}
+
+.option-row {
+	margin-bottom: 4px;
+}
+
+.option-row input {
+	width: 100%;
+	padding: 3px 6px;
+	border: 1px solid var(--vscode-input-border, transparent);
+	background: var(--vscode-input-background);
+	color: var(--vscode-input-foreground);
+	border-radius: 2px;
+	outline: none;
+	font-size: 12px;
+}
+
+.option-row input:focus {
+	border-color: var(--vscode-focusBorder);
+}
+
+.option-row input::placeholder {
+	color: var(--vscode-input-placeholderForeground);
+	opacity: 0.7;
+}
+
+/* 开关区 */
+.toggle-section {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 4px 0;
+}
+
+.toggle-label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	color: var(--vscode-editor-foreground);
+	cursor: pointer;
+	padding: 2px 0;
+}
+
+.toggle-label input[type="checkbox"] {
+	accent-color: var(--vscode-focusBorder);
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+/* 进度区 */
+.progress-section {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 0;
+	font-size: 12px;
+	color: var(--vscode-descriptionForeground);
+	border-top: 1px solid var(--vscode-widget-border, transparent);
+	margin-bottom: 4px;
+}
+
+.progress-section .spinner {
+	width: 12px;
+	height: 12px;
+	border: 2px solid var(--vscode-progressBar-background);
+	border-top-color: transparent;
+	border-radius: 50%;
+	animation: spin 0.6s linear infinite;
+	flex-shrink: 0;
+}
+
+@keyframes spin {
+	to { transform: rotate(360deg); }
+}
+
+/* 结果区 */
+.results-section {
+	border-top: 1px solid var(--vscode-widget-border, transparent);
+}
+
+.results-summary {
+	font-size: 12px;
+	color: var(--vscode-descriptionForeground);
+	padding: 6px 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.toggle-all-btn {
+	color: var(--vscode-textLink-foreground);
+	cursor: pointer;
+	font-size: 12px;
+	text-decoration: none;
+	margin-left: auto;
+	flex-shrink: 0;
+}
+
+.toggle-all-btn:hover {
+	color: var(--vscode-textLink-activeForeground);
+	text-decoration: underline;
+}
+
+/* 文件项 */
+.file-item {
+	margin-bottom: 1px;
+}
+
+.file-header {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 4px;
+	cursor: pointer;
+	border-radius: 2px;
+}
+
+.file-header:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.file-header .arrow {
+	font-size: 10px;
+	color: var(--vscode-tree-indentGuidesStroke);
+	transition: transform 0.1s;
+	flex-shrink: 0;
+	width: 12px;
+	text-align: center;
+}
+
+.file-header .arrow.expanded {
+	transform: rotate(90deg);
+}
+
+.file-header .file-name {
+	font-weight: 600;
+	color: var(--vscode-editor-foreground);
+	font-size: 13px;
+}
+
+.file-header .match-count {
+	font-size: 11px;
+	color: var(--vscode-descriptionForeground);
+	margin-left: 4px;
+}
+
+.file-header .file-path {
+	font-size: 11px;
+	color: var(--vscode-descriptionForeground);
+	margin-left: 6px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	flex: 1;
+}
+
+/* 匹配行 */
+.matches-container {
+	margin-left: 16px;
+}
+
+.match-row {
+	display: flex;
+	align-items: flex-start;
+	padding: 2px 4px;
+	cursor: pointer;
+	border-radius: 2px;
+	gap: 4px;
+}
+
+.match-row:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.match-row .line-number {
+	font-size: 11px;
+	color: var(--vscode-editorLineNumber-foreground);
+	/* min-width: 32px; */
+	text-align: left;
+	flex-shrink: 0;
+	padding-top: 1px;
+	font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.match-row .line-text {
+	font-size: 12px;
+	color: var(--vscode-editor-foreground);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: pre;
+	font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.match-row .line-text .highlight {
+	background: var(--vscode-editor-findMatchHighlightBackground, #e2c87a);
+	color: inherit;
+	border-radius: 1px;
+}
+
+/* 更多匹配 */
+.more-matches {
+	font-size: 11px;
+	color: var(--vscode-descriptionForeground);
+	padding: 4px;
+	text-align: center;
+}
+
+/* 空状态 */
+.empty-state {
+	padding: 20px;
+	text-align: center;
+	color: var(--vscode-descriptionForeground);
+	font-size: 12px;
+}
+
+/* 模式切换 */
+.mode-switch {
+	margin-left: auto;
+	display: flex;
+	gap: 2px;
+	border: 1px solid var(--vscode-input-border, transparent);
+	border-radius: 3px;
+	overflow: hidden;
+	flex-shrink: 0;
+}
+
+.mode-btn {
+	padding: 1px 8px;
+	font-size: 11px;
+	color: var(--vscode-descriptionForeground);
+	text-decoration: none;
+	cursor: pointer;
+	background: transparent;
+}
+
+.mode-btn:hover {
+	color: var(--vscode-textLink-foreground);
+}
+
+.mode-btn.active {
+	background: var(--vscode-inputOption-activeBackground);
+	color: var(--vscode-inputOption-activeForeground);
+}
+
+/* 组头（工作区文件夹折叠头） */
+.group-header {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 4px;
+	cursor: pointer;
+	border-radius: 2px;
+	margin-top: 2px;
+	font-weight: 600;
+}
+
+.group-header:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.group-header .arrow {
+	font-size: 10px;
+	color: var(--vscode-tree-indentGuidesStroke);
+	transition: transform 0.1s;
+	flex-shrink: 0;
+	width: 12px;
+	text-align: center;
+}
+
+.group-header .arrow.expanded {
+	transform: rotate(90deg);
+}
+
+.group-name {
+	font-size: 13px;
+	color: var(--vscode-editor-foreground);
+}
+
+/* 树节点头 */
+.tree-node-header {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 4px;
+	cursor: pointer;
+	border-radius: 2px;
+}
+
+.tree-node-header:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.tree-node-header .arrow {
+	font-size: 10px;
+	color: var(--vscode-tree-indentGuidesStroke);
+	transition: transform 0.1s;
+	flex-shrink: 0;
+	width: 12px;
+	text-align: center;
+}
+
+.tree-node-header .arrow.expanded {
+	transform: rotate(90deg);
+}
+
+.tree-node-header .match-count {
+	font-size: 11px;
+	color: var(--vscode-descriptionForeground);
+	margin-left: 4px;
+}
+
+.node-icon {
+	font-size: 11px;
+	flex-shrink: 0;
+}
+
+.dir-name {
+	font-size: 12px;
+	color: var(--vscode-editor-foreground);
+	font-weight: 500;
+}

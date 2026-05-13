@@ -15,6 +15,10 @@
       {
         "command": "pinyinsousuo.searchFiles",
         "title": "拼音搜索：搜索文件"
+      },
+      {
+        "command": "pinyinsousuo.focusSearch",
+        "title": "拼音搜索：搜索文件内容"
       }
     ],
     "keybindings": [
@@ -22,8 +26,31 @@
         "command": "pinyinsousuo.searchFiles",
         "key": "alt+p",
         "mac": "alt+p"
+      },
+      {
+        "command": "pinyinsousuo.focusSearch",
+        "key": "shift+y",
+        "mac": "shift+y"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "pinyinsousuo-sidebar",
+          "title": "拼音搜索",
+          "icon": "media/P.svg"
+        }
+      ]
+    },
+    "views": {
+      "pinyinsousuo-sidebar": [
+        {
+          "type": "webview",
+          "id": "pinyinsousuo.searchContent",
+          "name": "搜索文件内容"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
