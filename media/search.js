@@ -132,13 +132,16 @@
 				renderResults();
 				break;
 			case 'focus':
-				if (msg.selectedText) {
-					searchInput.value = msg.selectedText;
-					clearTimeout(searchTimeout);
-					doSearch();
-				}
-				searchInput.focus();
-				searchInput.select();
+					if (msg.includeText) {
+						includeInput.value = msg.includeText;
+					}
+					if (msg.selectedText) {
+						searchInput.value = msg.selectedText;
+						clearTimeout(searchTimeout);
+						doSearch();
+					}
+					searchInput.focus();
+					searchInput.select();
 				break;
 		}
 	});

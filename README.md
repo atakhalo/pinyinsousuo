@@ -17,7 +17,9 @@ VS Code 插件，支持用拼音匹配文件名和文件内容。
 <img src="./docImage/content.png" height="300" />
 
 - 快捷键：`Shift+Y`（聚焦搜索框，同时带入选中的文本）
-- 命令: pinyinsousuo.focusSearch  拼音搜索：搜索文件内容
+	- 命令: pinyinsousuo.focusSearch  拼音搜索：搜索文件内容
+- 快捷键：`Shift+R`（在当前文件内搜索，即当前文件作为包含文件）
+	- 命令: pinyinsousuo.focusSearch  拼音搜索：搜索当前文件内容
 - 侧边栏 Webview 视图，在每个匹配行内高亮匹配区间
 - 输入拼音（全拼或首字母）、中文、英文进行搜索
 - 点击结果行直接在编辑器中打开并定位

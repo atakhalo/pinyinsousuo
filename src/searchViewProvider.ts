@@ -7,6 +7,7 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
 	private _engine: SearchEngine;
 	private _pendingFocus = false;
 	private _pendingText = '';
+	private _pendingInclude = '';
 
 	constructor(private readonly _extensionUri: vscode.Uri) {
 		this._engine = new SearchEngine();
@@ -49,7 +50,7 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
 		// 处理 pending focus 请求
 		if (this._pendingFocus) {
 			this._pendingFocus = false;
-			this.focus(this._pendingText);
+			this.focus(this._pendingText, this._pendingInclude);
 		}
 	}
 
@@ -96,15 +97,21 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
 	/**
 	 * 激活视图并聚焦搜索输入框
 	 * @param selectedText 编辑器选中的文本，用于预填搜索
+	 * @param includeText 预填的包含文件模式
 	 */
-	focus(selectedText?: string) {
+	focus(selectedText?: string, includeText?: string) {
 		if (!this._view) {
 			this._pendingFocus = true;
 			this._pendingText = selectedText || '';
+			this._pendingInclude = includeText || '';
 			return;
 		}
 		this._view.show?.(true);
-		this._view.webview.postMessage({ type: 'focus', selectedText: selectedText || '' });
+		this._view.webview.postMessage({
+			type: 'focus',
+			selectedText: selectedText || '',
+			includeText: includeText || '',
+		});
 	}
 
 	private _getHtmlContent(webview: vscode.Webview): string {

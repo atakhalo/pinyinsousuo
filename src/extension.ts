@@ -157,7 +157,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand('pinyinsousuo.focusSearch', async () => {
-			// 获取编辑器中选中的文本
 			let selectedText = '';
 			const editor = vscode.window.activeTextEditor;
 			if (editor && !editor.selection.isEmpty) {
@@ -166,6 +165,23 @@ export function activate(context: vscode.ExtensionContext) {
 
 			await vscode.commands.executeCommand('workbench.view.extension.pinyinsousuo-sidebar');
 			searchProvider.focus(selectedText);
+		}),
+	);
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand('pinyinsousuo.focusSearchWithCurrentFile', async () => {
+			let selectedText = '';
+			let includeText = '';
+			const editor = vscode.window.activeTextEditor;
+			if (editor) {
+				if (!editor.selection.isEmpty) {
+					selectedText = editor.document.getText(editor.selection);
+				}
+				includeText = './' + vscode.workspace.asRelativePath(editor.document.uri);
+			}
+
+			await vscode.commands.executeCommand('workbench.view.extension.pinyinsousuo-sidebar');
+			searchProvider.focus(selectedText, includeText);
 		}),
 	);
 }

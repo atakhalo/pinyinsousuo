@@ -1,80 +1,89 @@
 {
-  "name": "pinyinsousuo",
-  "displayName": "PinyinSousuo",
-  "description": "拼音搜索 — 支持拼音匹配的文件搜索插件",
-  "version": "1.0.1",
-  "engines": {
-    "vscode": "^1.118.0"
-  },
-  "categories": [
-    "Other"
-  ],
-"main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "pinyinsousuo.searchFiles",
-        "title": "拼音搜索：搜索文件"
-      },
-      {
-        "command": "pinyinsousuo.focusSearch",
-        "title": "拼音搜索：搜索文件内容"
-      }
-    ],
-    "keybindings": [
-      {
-        "command": "pinyinsousuo.searchFiles",
-        "key": "alt+p",
-        "mac": "alt+p"
-      },
-      {
-        "command": "pinyinsousuo.focusSearch",
-        "key": "shift+y",
-        "mac": "shift+y"
-      }
-    ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "pinyinsousuo-sidebar",
-          "title": "拼音搜索",
-          "icon": "media/P.svg"
-        }
-      ]
-    },
-    "views": {
-      "pinyinsousuo-sidebar": [
-        {
-          "type": "webview",
-          "id": "pinyinsousuo.searchContent",
-          "name": "搜索文件内容"
-        }
-      ]
-    }
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src",
-    "test": "vscode-test"
-  },
-  "devDependencies": {
-    "@types/mocha": "^10.0.10",
-    "@types/node": "^22.19.18",
-    "@types/vscode": "^1.118.0",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2",
-    "eslint": "^9.39.3",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.1"
-  },
-  "dependencies": {
-    "pinyin-match": "^1.2.10"
-  },
-  "repository": {
-	"type": "git",
-	"url": "https://github.com/atakhalo/pinyinsousuo.git"
-  }
+	"name": "pinyinsousuo",
+	"displayName": "PinyinSousuo",
+	"description": "拼音搜索 — 支持拼音匹配的文件搜索插件",
+	"version": "1.0.1",
+	"engines": {
+		"vscode": "^1.118.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "pinyinsousuo.searchFiles",
+				"title": "拼音搜索：搜索文件"
+			},
+			{
+				"command": "pinyinsousuo.focusSearch",
+				"title": "拼音搜索：搜索文件内容"
+			},
+			{
+				"command": "pinyinsousuo.focusSearchWithCurrentFile",
+				"title": "拼音搜索：搜索当前文件内容"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "pinyinsousuo.searchFiles",
+				"key": "alt+p",
+				"mac": "alt+p"
+			},
+			{
+				"command": "pinyinsousuo.focusSearch",
+				"key": "shift+y",
+				"mac": "shift+y"
+			},
+			{
+				"command": "pinyinsousuo.focusSearchWithCurrentFile",
+				"key": "shift+r",
+				"mac": "shift+r"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "pinyinsousuo-sidebar",
+					"title": "拼音搜索",
+					"icon": "media/P.svg"
+				}
+			]
+		},
+		"views": {
+			"pinyinsousuo-sidebar": [
+				{
+					"type": "webview",
+					"id": "pinyinsousuo.searchContent",
+					"name": "搜索文件内容"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"pretest": "npm run compile && npm run lint",
+		"lint": "eslint src",
+		"test": "vscode-test"
+	},
+	"devDependencies": {
+		"@types/mocha": "^10.0.10",
+		"@types/node": "^22.19.18",
+		"@types/vscode": "^1.118.0",
+		"@vscode/test-cli": "^0.0.12",
+		"@vscode/test-electron": "^2.5.2",
+		"eslint": "^9.39.3",
+		"typescript": "^5.9.3",
+		"typescript-eslint": "^8.56.1"
+	},
+	"dependencies": {
+		"pinyin-match": "^1.2.10"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/atakhalo/pinyinsousuo.git"
+	}
 }
