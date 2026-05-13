@@ -2,7 +2,7 @@
 	"name": "pinyinsousuox",
 	"displayName": "PinyinSousuoX",
 	"description": "拼音搜索 — 支持拼音匹配的文件搜索插件",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"engines": {
 		"vscode": "^1.118.0"
 	},
@@ -33,13 +33,13 @@
 			},
 			{
 				"command": "pinyinsousuo.focusSearch",
-				"key": "shift+y",
-				"mac": "shift+y"
+				"key": "alt+y",
+				"mac": "alt+y"
 			},
 			{
 				"command": "pinyinsousuo.focusSearchWithCurrentFile",
-				"key": "shift+r",
-				"mac": "shift+r"
+				"key": "alt+d",
+				"mac": "alt+d"
 			}
 		],
 		"viewsContainers": {
