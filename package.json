@@ -72,5 +72,9 @@
   },
   "dependencies": {
     "pinyin-match": "^1.2.10"
+  },
+  "repository": {
+	"type": "git",
+	"url": "https://github.com/atakhalo/pinyinsousuo.git"
   }
 }
