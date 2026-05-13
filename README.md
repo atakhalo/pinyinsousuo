@@ -1,71 +1,47 @@
-# pinyinsousuo README
+# PinyinSousuo（拼音搜索）
 
-This is the README for your extension "pinyinsousuo". After writing up a brief description, we recommend including the following sections.
+VS Code 插件，支持用拼音匹配文件名和文件内容。
 
-## Features
+## 功能
+### 拼音搜索文件
+![拼音搜索文件](./docImage/file.png)
+打开文件选择面板，可输入 拼音 搜索文件，并快速打开
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- 快捷键：`Alt+P` ； 
+- 命令: pinyinsousuo.searchFiles  拼音搜索：搜索文件
+- 输入拼音（全拼或首字母）、中文、英文，匹配工作区内的文件名和路径
+- 
+### 拼音搜索文件内容
+可在侧边栏拼音搜索文件内容 
 
-For example if there is an image subfolder under your extension project workspace:
+<img src="./docImage/content.png" height="300" />
 
-\!\[feature X\]\(images/feature-x.png\)
+- 快捷键：`Shift+Y`（聚焦搜索框，同时带入选中的文本）
+- 命令: pinyinsousuo.focusSearch  拼音搜索：搜索文件内容
+- 侧边栏 Webview 视图，在每个匹配行内高亮匹配区间
+- 输入拼音（全拼或首字母）、中文、英文进行搜索
+- 点击结果行直接在编辑器中打开并定位
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+#### 过滤选项
 
-## Requirements
+| 选项 | 说明 |
+|------|------|
+| 包含的文件 | Glob 模式限定搜索范围，支持多组（逗号/分号/换行分隔） |
+| 排除的文件 | Glob 模式排除匹配文件，支持多组（逗号/分号/换行分隔） |
+| 仅在打开的编辑器中搜索 | 限定搜索范围为已打开标签页 |
+| 使用"排除设置"与"忽略文件" | 启用后自动应用 `search.exclude`、`files.exclude` 及 `.gitignore` |
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+#### 模式规范化
 
-## Extension Settings
+用户输入的包含/排除模式自动适配 `findFiles` API，对齐 VS Code 原生搜索行为：
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+- 去掉 `./` 前缀
+- 连续星号修正：`***.md`、`**.md` → `**/*.md`
+- 无 glob 字符 + 无后缀 → 视为目录，追加 `/**`
+- 无 glob 字符 + 有后缀 → 视为文件名，追加 `**/` 前缀
+- 多根工作区：`./工作区名称/子路径` 识别为 `RelativePattern`，限定在该工作区内
 
-For example:
 
-This extension contributes the following settings:
+## 依赖
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+- [pinyin-match](https://www.npmjs.com/package/pinyin-match) — 拼音匹配引擎
