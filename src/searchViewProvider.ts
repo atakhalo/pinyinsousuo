@@ -144,7 +144,7 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
 				</label>
 				<label class="toggle-label">
 					<input type="checkbox" id="useExcludeSettings" checked>
-					<span>使用排除设置</span>
+					<span>使用"排除设置"与"忽略文件"</span>
 				</label>
 			</div>
 		</div>

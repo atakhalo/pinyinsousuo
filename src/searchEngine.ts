@@ -26,32 +26,20 @@ export interface SearchOptions {
 
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
-/** findFiles 专用的基础排除——单层 {} 无嵌套，安全有效 */
-const BASE_EXCLUDE = '**/{node_modules,.git,dist,out,build,.vscode,__pycache__}/**';
-
-/**
- * 将简单 Glob 模式转为正则（不支持深层嵌套 {} 或复杂语法）
- */
-function globToRegex(pattern: string): RegExp {
-	let p = pattern.replace(/\\/g, '/');
-	// 转义正则特殊字符（除了 */? 已经在后续替换中处理）
-	p = p.replace(/[.+^${}()|[\]\\]/g, '\\$&');
-	// 还原被过度转义的 * ? {
-	p = p.replace(/\\\*/g, '*');
-	p = p.replace(/\\\?/g, '?');
-	p = p.replace(/\\\{/g, '{');
-	p = p.replace(/\\\}/g, '}');
-	p = p.replace(/\\\,/g, ',');
-	// ** → 匹配任意层级
-	p = p.replace(/\*\*/g, '<<STARSTAR>>');
-	// * → 匹配单层任意字符
-	p = p.replace(/\*/g, '[^/]*');
-	p = p.replace(/<<STARSTAR>>/g, '.*');
-	// ? → 匹配单字符
-	p = p.replace(/\?/g, '.');
-	// {a,b} → 正则选择
-	p = p.replace(/\{([^}]+)\}/g, (_, alt) => `(${alt.split(',').map((s: string) => s.trim()).join('|')})`);
-	return new RegExp('^(.*/)?' + p + '(/.*)?$');
+// 将用户模式规范化为 findFiles 兼容的 glob，模拟 VS Code 原生搜索行为：
+// - 去掉前导 ./
+// - 已有 glob 字符（*?{[）→ 原样返回
+// - 有文件后缀（如 .py）→ 视为文件名，加 **/ 前缀匹配任意深度
+// - 无后缀 → 视为目录名，加 /** 后缀匹配其下所有文件
+function normalizeGlob(pattern: string): string {
+	let p = pattern.trim().replace(/^\.\//, '');
+	if (/[*?{\[]/.test(p)) {
+		return p;
+	}
+	if (/\.[a-zA-Z0-9]+$/.test(p)) {
+		return '**/' + p;
+	}
+	return p.replace(/\/$/, '') + '/**';
 }
 
 /**
@@ -94,33 +82,37 @@ export class SearchEngine {
 		if (openEditorsOnly) {
 			files = this._getOpenEditorFiles();
 		} else {
-			const includePattern = include?.trim() || '**/*';
+			// 构建 include glob
+			const includeParts: string[] = [];
+			if (include?.trim()) {
+				for (const p of include.split(/[,;\n]+/)) {
+					const t = p.trim();
+					if (t) { includeParts.push(normalizeGlob(t)); }
+				}
+			}
+			const includePattern = includeParts.length > 0
+				? (includeParts.length === 1 ? includeParts[0] : `{${includeParts.join(',')}}`)
+				: '**/*';
 
-			// 只有基础排除传给 findFiles（单层 {}，无嵌套，不会非法）
-			const findFilesExclude = useDefaultExcludes ? BASE_EXCLUDE : undefined;
-			files = await vscode.workspace.findFiles(includePattern, findFilesExclude);
-
-			// 收集附加排除模式（来源于配置和用户输入），用代码后过滤
-			const extraExcludes: string[] = [];
+			// 构建 exclude glob
+			const excludeParts: string[] = [];
 
 			if (useExcludeSettings) {
-				extraExcludes.push(...readConfigExcludes());
+				excludeParts.push(...readConfigExcludes());
 			}
 
 			if (exclude?.trim()) {
 				for (const p of exclude.split(/[,;\n]+/)) {
 					const t = p.trim();
-					if (t) {extraExcludes.push(t);}
+					if (t) { excludeParts.push(normalizeGlob(t)); }
 				}
 			}
 
-			if (extraExcludes.length > 0) {
-				const regexes = extraExcludes.map(p => globToRegex(p));
-				files = files.filter(f => {
-					const rel = vscode.workspace.asRelativePath(f).replace(/\\/g, '/');
-					return !regexes.some(r => r.test(rel));
-				});
-			}
+			const excludePattern = excludeParts.length > 0
+				? `{${excludeParts.join(',')}}`
+				: undefined;
+
+			files = await vscode.workspace.findFiles(includePattern, excludePattern);
 		}
 
 		const total = files.length;
