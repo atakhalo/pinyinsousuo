@@ -28,15 +28,24 @@ const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
 // 将用户模式规范化为 findFiles 兼容的 glob，模拟 VS Code 原生搜索行为：
 // - 去掉前导 ./
-// - 已有 glob 字符（*?{[）→ 原样返回
-// - 有文件后缀（如 .py）→ 视为文件名，加 **/ 前缀匹配任意深度
-// - 无后缀 → 视为目录名，加 /** 后缀匹配其下所有文件
+// - 有 glob 字符 + 文件后缀（如 *.ts, **/*.py）→ 原样返回
+// - 有 glob 字符 + 无后缀（如 **/任务UI）→ 视为目录，加 /** 后缀
+// - 无 glob + 有后缀（如 测试.py）→ 视为文件名，加 **/ 前缀
+// - 无 glob + 无后缀（如 测试文件夹）→ 视为目录，加 /** 后缀
 function normalizeGlob(pattern: string): string {
 	let p = pattern.trim().replace(/^\.\//, '');
-	if (/[*?{\[]/.test(p)) {
+	// 规范化连续星号：*** → **，**.ext → **/*.ext
+	p = p.replace(/\*{3,}/g, '**');
+	p = p.replace(/\*\*([^\/\*])/g, '**/*$1');
+	const hasGlob = /[*?{\[]/.test(p);
+	const hasExt = /\.[a-zA-Z0-9]+$/.test(p);
+	if (hasGlob && hasExt) {
 		return p;
 	}
-	if (/\.[a-zA-Z0-9]+$/.test(p)) {
+	if (hasGlob) {
+		return p.replace(/\/$/, '') + '/**';
+	}
+	if (hasExt) {
 		return '**/' + p;
 	}
 	return p.replace(/\/$/, '') + '/**';
@@ -82,17 +91,39 @@ export class SearchEngine {
 		if (openEditorsOnly) {
 			files = this._getOpenEditorFiles();
 		} else {
-			// 构建 include glob
+			// 构建 include glob（多根工作区时使用 RelativePattern 限定范围）
 			const includeParts: string[] = [];
+			let includeWs: vscode.WorkspaceFolder | undefined;
+			let wsConflict = false;
+
 			if (include?.trim()) {
-				for (const p of include.split(/[,;\n]+/)) {
-					const t = p.trim();
-					if (t) { includeParts.push(normalizeGlob(t)); }
+				const wsFolders = vscode.workspace.workspaceFolders;
+				for (const raw of include.split(/[,;\n]+/)) {
+					const t = raw.trim();
+					if (!t) {continue;}
+					// 检测 ./工作区名称 或 ./工作区名称/子路径
+					const resolved = this._resolveWorkspacePrefix(t, wsFolders);
+					const glob = resolved.pattern ? normalizeGlob(resolved.pattern) : '**/*';
+					includeParts.push(glob);
+					if (resolved.workspace) {
+						if (!includeWs) {
+							includeWs = resolved.workspace;
+						} else if (includeWs !== resolved.workspace) {
+							wsConflict = true;
+						}
+					}
 				}
 			}
-			const includePattern = includeParts.length > 0
-				? (includeParts.length === 1 ? includeParts[0] : `{${includeParts.join(',')}}`)
-				: '**/*';
+
+			let includePattern: vscode.GlobPattern;
+			if (includeParts.length === 0) {
+				includePattern = '**/*';
+			} else if (!wsConflict && includeWs) {
+				const p = includeParts.length === 1 ? includeParts[0] : `{${includeParts.join(',')}}`;
+				includePattern = new vscode.RelativePattern(includeWs, p);
+			} else {
+				includePattern = includeParts.length === 1 ? includeParts[0] : `{${includeParts.join(',')}}`;
+			}
 
 			// 构建 exclude glob（不含 .gitignore）
 			const excludeParts: string[] = [];
@@ -109,7 +140,7 @@ export class SearchEngine {
 			}
 
 			// 收集 .gitignore 排除模式
-			const gitExcludes = await this._collectGitignoreExcludes(includeParts, excludeParts);
+			const gitExcludes = await this._collectGitignoreExcludes(includeParts, excludeParts, includeWs);
 			excludeParts.push(...gitExcludes);
 
 			const excludePattern = excludeParts.length > 0
@@ -134,10 +165,30 @@ export class SearchEngine {
 		}
 	}
 
+	// 去掉 ./工作区名称[/...] 前缀，返回剩余模式与匹配到的工作区
+	private _resolveWorkspacePrefix(
+		raw: string,
+		wsFolders: readonly vscode.WorkspaceFolder[] | undefined,
+	): { pattern: string; workspace?: vscode.WorkspaceFolder } {
+		let p = raw.trim().replace(/^\.\//, '');
+		if (wsFolders) {
+			for (const ws of wsFolders) {
+				if (p.startsWith(ws.name + '/')) {
+					return { pattern: p.substring(ws.name.length + 1), workspace: ws };
+				}
+				if (p === ws.name) {
+					return { pattern: '', workspace: ws };
+				}
+			}
+		}
+		return { pattern: p };
+	}
+
 	// 找出纳入搜索范围的 .gitignore 文件，读取并转为 findFiles 用 glob
 	private async _collectGitignoreExcludes(
 		includeParts: string[],
 		excludeParts: string[],
+		includeWs?: vscode.WorkspaceFolder,
 	): Promise<string[]> {
 		try {
 			// 构建 .gitignore 文件的查找范围
@@ -150,7 +201,7 @@ export class SearchEngine {
 				}).filter(Boolean);
 				const unique = [...new Set(dirs)];
 				if (unique.length > 0) {
-					// 展开为 {.gitignore, dir1.gitignore, dir1**/.gitignore, dir2.gitignore, dir2**/.gitignore, ...}
+					// 展开为 {.gitignore, dir1.gitignore, dir1**/.gitignore, dir2.gitignore, ...}
 					const parts = ['.gitignore'];
 					for (const d of unique) {
 						parts.push(`${d}.gitignore`, `${d}**/.gitignore`);
@@ -165,7 +216,12 @@ export class SearchEngine {
 			const gitExclude = excludeParts.length > 0
 				? `{${excludeParts.join(',')}}`
 				: undefined;
-			const gitignoreUris = await vscode.workspace.findFiles(gitInclude, gitExclude);
+
+			const gitignoreGlob: vscode.GlobPattern = includeWs
+				? new vscode.RelativePattern(includeWs, gitInclude)
+				: gitInclude;
+
+			const gitignoreUris = await vscode.workspace.findFiles(gitignoreGlob, gitExclude);
 			if (gitignoreUris.length === 0) {return [];}
 
 			const results: string[] = [];
