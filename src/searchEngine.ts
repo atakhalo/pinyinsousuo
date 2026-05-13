@@ -138,14 +138,18 @@ export class SearchEngine {
 					if (t) { excludeParts.push(normalizeGlob(t)); }
 				}
 			}
+			let excludePattern = null;
 
-			// 收集 .gitignore 排除模式
-			const gitExcludes = await this._collectGitignoreExcludes(includeParts, excludeParts, includeWs);
-			excludeParts.push(...gitExcludes);
+			if (useExcludeSettings) {
+				// 收集 .gitignore 排除模式
+				const gitExcludes = await this._collectGitignoreExcludes(includeParts, excludeParts, includeWs);
+				excludeParts.push(...gitExcludes);
+				
+				excludePattern = excludeParts.length > 0
+					? `{${excludeParts.join(',')}}`
+					: null;
+			}
 
-			const excludePattern = excludeParts.length > 0
-				? `{${excludeParts.join(',')}}`
-				: undefined;
 
 			files = await vscode.workspace.findFiles(includePattern, excludePattern);
 		}
