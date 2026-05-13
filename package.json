@@ -1,6 +1,6 @@
 {
-	"name": "pinyinsousuo",
-	"displayName": "PinyinSousuo",
+	"name": "pinyinsousuox",
+	"displayName": "PinyinSousuoX",
 	"description": "拼音搜索 — 支持拼音匹配的文件搜索插件",
 	"version": "1.0.1",
 	"engines": {
@@ -85,5 +85,7 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/atakhalo/pinyinsousuo.git"
-	}
+	},
+	"publisher": "atakhalo",
+	"icon": "pinyinIcon.png"
 }
