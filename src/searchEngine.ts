@@ -94,7 +94,7 @@ export class SearchEngine {
 				? (includeParts.length === 1 ? includeParts[0] : `{${includeParts.join(',')}}`)
 				: '**/*';
 
-			// 构建 exclude glob
+			// 构建 exclude glob（不含 .gitignore）
 			const excludeParts: string[] = [];
 
 			if (useExcludeSettings) {
@@ -107,6 +107,10 @@ export class SearchEngine {
 					if (t) { excludeParts.push(normalizeGlob(t)); }
 				}
 			}
+
+			// 收集 .gitignore 排除模式
+			const gitExcludes = await this._collectGitignoreExcludes(includeParts, excludeParts);
+			excludeParts.push(...gitExcludes);
 
 			const excludePattern = excludeParts.length > 0
 				? `{${excludeParts.join(',')}}`
@@ -128,6 +132,127 @@ export class SearchEngine {
 				onFileResult(fileMatch);
 			}
 		}
+	}
+
+	// 找出纳入搜索范围的 .gitignore 文件，读取并转为 findFiles 用 glob
+	private async _collectGitignoreExcludes(
+		includeParts: string[],
+		excludeParts: string[],
+	): Promise<string[]> {
+		try {
+			// 构建 .gitignore 文件的查找范围
+			let gitInclude: string;
+			if (includeParts.length > 0) {
+				// 提取每个 include 模式的静态目录前缀
+				const dirs = includeParts.map(p => {
+					const m = p.match(/^([^*?{\[]*\/)/);
+					return m ? m[1] : '';
+				}).filter(Boolean);
+				const unique = [...new Set(dirs)];
+				if (unique.length > 0) {
+					// 展开为 {.gitignore, dir1.gitignore, dir1**/.gitignore, dir2.gitignore, dir2**/.gitignore, ...}
+					const parts = ['.gitignore'];
+					for (const d of unique) {
+						parts.push(`${d}.gitignore`, `${d}**/.gitignore`);
+					}
+					gitInclude = `{${parts.join(',')}}`;
+				} else {
+					gitInclude = '.gitignore';
+				}
+			} else {
+				gitInclude = '**/.gitignore';
+			}
+			const gitExclude = excludeParts.length > 0
+				? `{${excludeParts.join(',')}}`
+				: undefined;
+			const gitignoreUris = await vscode.workspace.findFiles(gitInclude, gitExclude);
+			if (gitignoreUris.length === 0) {return [];}
+
+			const results: string[] = [];
+			for (const uri of gitignoreUris) {
+				if (this._cancelled) {return results;}
+				const patterns = await this._readGitignoreFile(uri);
+				results.push(...patterns);
+			}
+			return results;
+		} catch {
+			return [];
+		}
+	}
+
+	// 读取单个 .gitignore，转换每条模式为 glob
+	private async _readGitignoreFile(uri: vscode.Uri): Promise<string[]> {
+		try {
+			const content = await vscode.workspace.fs.readFile(uri);
+			const text = new TextDecoder('utf-8', { fatal: false }).decode(content);
+			const dir = uri.path.substring(0, uri.path.lastIndexOf('/'));
+			const wsFolder = vscode.workspace.getWorkspaceFolder(uri);
+			let relativeDir = '';
+			if (wsFolder) {
+				const wsPath = wsFolder.uri.path;
+				if (dir.startsWith(wsPath + '/')) {
+					relativeDir = dir.substring(wsPath.length + 1);
+				}
+			}
+
+			const results: string[] = [];
+			for (const line of text.split(/\r?\n/)) {
+				const p = line.trim();
+				if (!p || p.startsWith('#') || p.startsWith('!')) {continue;}
+
+				const globs = this._gitignoreToGlob(p, relativeDir);
+				results.push(...globs);
+			}
+			return results;
+		} catch {
+			return [];
+		}
+	}
+
+	// 将单条 .gitignore 规则转为 findFiles 兼容的 glob
+	private _gitignoreToGlob(pattern: string, relativeDir: string): string[] {
+		let p = pattern;
+
+		// 去除末尾空格（.gitignore 允许）
+		p = p.trimEnd();
+
+		let anchored = true;
+		// let anchored = false;
+		if (p.startsWith('/')) {
+			// anchored = true;
+			p = p.substring(1);
+		}
+
+		let isDir = false;
+		if (p.endsWith('/')) {
+			isDir = true;
+			p = p.substring(0, p.length - 1);
+		}
+
+		if (!p) {return [];}
+
+		const hasSlash = p.includes('/');
+
+		// 构建相对工作区根目录的 glob
+		let base: string;
+		if (anchored || hasSlash) {
+			base = relativeDir ? `${relativeDir}/${p}` : p;
+		} else {
+			// 无 / 无锚定 → 匹配任意深度
+			base = `**/${p}`;
+		}
+
+		const results: string[] = [];
+		if (isDir) {
+			results.push(`${base}/**`);
+		} else {
+			results.push(base);
+			// 无后缀且无 glob 字符的非目录模式，很可能也指目录（如 node_modules、build）
+			if (!/\.[a-zA-Z0-9]+$/.test(p) && !/[*?{\[]/.test(p)) {
+				results.push(`${base}/**`);
+			}
+		}
+		return results;
 	}
 
 	private _getOpenEditorFiles(): vscode.Uri[] {

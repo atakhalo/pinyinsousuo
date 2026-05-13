@@ -132,10 +132,10 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
 		</div>
 		<div class="options-section">
 			<div class="option-row">
-				<input type="text" id="includeInput" placeholder="包含的文件" spellcheck="false">
+				<input type="text" id="includeInput" placeholder="包含的文件(不用加工作区文件夹）" spellcheck="false">
 			</div>
 			<div class="option-row">
-				<input type="text" id="excludeInput" placeholder="排除的文件" spellcheck="false">
+				<input type="text" id="excludeInput" placeholder="排除的文件(不用加工作区文件夹）" spellcheck="false">
 			</div>
 			<div class="toggle-section">
 				<label class="toggle-label">
