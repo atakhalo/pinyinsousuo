@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import PinyinMatch from 'pinyin-match';
+import { getLogger } from './logger';
 
 export interface LineMatch {
 	lineNumber: number;       // 1-based
@@ -39,8 +40,13 @@ function normalizeGlob(pattern: string): string {
 	p = p.replace(/\*\*([^\/\*])/g, '**/*$1');
 	const hasGlob = /[*?{\[]/.test(p);
 	const hasExt = /\.[a-zA-Z0-9]+$/.test(p);
+	// 纯扩展名模式：.cs → **/*.cs，匹配所有该扩展名的文件
+	if (/^\.[a-zA-Z0-9]+$/.test(p)) {
+		return '**/*' + p;
+	}
 	if (hasGlob && hasExt) {
-		return p;
+		// *.cs → **/*.cs，确保 findFiles 能递归匹配子目录
+		return p.includes('/') ? p : '**/' + p;
 	}
 	if (hasGlob) {
 		return p.replace(/\/$/, '') + '/**';
@@ -153,10 +159,16 @@ export class SearchEngine {
 						? new vscode.RelativePattern(ws, includeGlobStr)
 						: includeGlobStr;
 
+					// getLogger().appendLine(`${ws?.name} search include: ${includeGlobStr} in ${ws?.name}`);
+					// getLogger().appendLine(`${ws?.name} search exclude: ${wsExcludePattern}`);
+
 					const wsFiles = await vscode.workspace.findFiles(wsInclude, wsExcludePattern);
 					allResults.push(...wsFiles);
+					// getLogger().appendLine(`${ws?.name} matched files: ${wsFiles.length}`);
 				}
 				files = allResults;
+
+				// getLogger().appendLine(`total matched files: ${files.length}`);
 			} else {
 				// 不使用排除设置：单次 findFiles
 				let includePattern: vscode.GlobPattern;
@@ -264,14 +276,19 @@ export class SearchEngine {
 			const content = await vscode.workspace.fs.readFile(uri);
 			const text = new TextDecoder('utf-8', { fatal: false }).decode(content);
 			const dir = uri.path.substring(0, uri.path.lastIndexOf('/'));
-			const wsFolder = vscode.workspace.getWorkspaceFolder(uri);
+			// getWorkspaceFolder 打包版只返回
+			const wsFolder = vscode.workspace.getWorkspaceFolder(uri); 
 			let relativeDir = '';
 			if (wsFolder) {
+				// 统一小写比较，修复 Windows 盘符大小写不一致（e:/ vs E:/）
 				const wsPath = wsFolder.uri.path;
-				if (dir.startsWith(wsPath + '/')) {
+				const lowerDir = dir.toLowerCase();
+				const lowerWsPath = wsPath.toLowerCase();
+				if (lowerDir.startsWith(lowerWsPath + '/')) {
 					relativeDir = dir.substring(wsPath.length + 1);
 				}
 			}
+			// getLogger().appendLine(`scan ignore ${uri.path} in ${wsFolder?.name} ${relativeDir}`);
 
 			const results: string[] = [];
 			for (const line of text.split(/\r?\n/)) {
@@ -294,8 +311,9 @@ export class SearchEngine {
 		// 去除末尾空格（.gitignore 允许）
 		p = p.trimEnd();
 
-		let anchored = true; // 每个目录下的.gitignore应该只影响该目录下，所以都需要加前缀路径
+		let anchored = false; 
 		if (p.startsWith('/')) {
+			anchored = true;
 			p = p.substring(1);
 		}
 
@@ -310,12 +328,13 @@ export class SearchEngine {
 		const hasSlash = p.includes('/');
 
 		// 构建相对工作区根目录的 glob
+		// 每个目录下的.gitignore应该只影响该目录下，所以都需要加前缀路径
 		let base: string;
 		if (anchored || hasSlash) {
 			base = relativeDir ? `${relativeDir}/${p}` : p;
 		} else {
 			// 无 / 无锚定 → 匹配任意深度
-			base = `**/${p}`;
+			base = relativeDir ? `${relativeDir}/**/${p}` : `**/${p}`;
 		}
 
 		const results: string[] = [];
